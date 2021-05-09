@@ -54,12 +54,11 @@ import static org.apache.dubbo.common.constants.CommonConstants.DEFAULT_KEY;
 import static org.apache.dubbo.common.constants.CommonConstants.REMOVE_VALUE_PREFIX;
 
 /**
- *
  * {@link org.apache.dubbo.rpc.model.ApplicationModel}, {@code DubboBootstrap} and this class are
  * at present designed to be singleton or static (by itself totally static or uses some static fields).
  * So the instances returned from them are of process or classloader scope. If you want to support
  * multiple dubbo servers in a single process, you may need to refactor these three classes.
- *
+ * <p>
  * Load dubbo extensions
  * <ul>
  * <li>auto inject dependency extension </li>
@@ -331,7 +330,9 @@ public class ExtensionLoader<T> {
     }
 
     private Holder<Object> getOrCreateHolder(String name) {
+        //尝试从扩展实例缓存中获取实例对象
         Holder<Object> holder = cachedInstances.get(name);
+        //如果没有获取到对应实例对象，创建一个新的并存放到缓存对象中
         if (holder == null) {
             cachedInstances.putIfAbsent(name, new Holder<>());
             holder = cachedInstances.get(name);
@@ -374,9 +375,12 @@ public class ExtensionLoader<T> {
     /**
      * Find the extension with the given name. If the specified name is not found, then {@link IllegalStateException}
      * will be thrown.
+     * <p>
+     * 通过给定的名称查看扩展对象，如果指定名称不能找到对应扩展实例对象抛出IllegalStateException异常。
      */
     @SuppressWarnings("unchecked")
     public T getExtension(String name) {
+
         if (StringUtils.isEmpty(name)) {
             throw new IllegalArgumentException("Extension name == null");
         }
@@ -385,10 +389,12 @@ public class ExtensionLoader<T> {
         }
         final Holder<Object> holder = getOrCreateHolder(name);
         Object instance = holder.get();
+        //当尝试从缓存中获取数据失败时，尝试创建一个Extension实例对象
         if (instance == null) {
             synchronized (holder) {
                 instance = holder.get();
                 if (instance == null) {
+                    //当检查实例为空时创建一个新的实例对象并存放到holder对象中
                     instance = createExtension(name);
                     holder.set(instance);
                 }
@@ -404,7 +410,7 @@ public class ExtensionLoader<T> {
      * @return non-null
      */
     public T getOrDefaultExtension(String name) {
-        return containsExtension(name)  ? getExtension(name) : getDefaultExtension();
+        return containsExtension(name) ? getExtension(name) : getDefaultExtension();
     }
 
     /**
@@ -586,17 +592,24 @@ public class ExtensionLoader<T> {
 
     @SuppressWarnings("unchecked")
     private T createExtension(String name) {
+        //通过扩展对象的名称获取扩展对象的Class并检查Class是否为null,如果为null抛出未查找到的异常
         Class<?> clazz = getExtensionClasses().get(name);
         if (clazz == null) {
             throw findException(name);
         }
         try {
+            //尝试从扩展实例对象缓存中获取实例，并检查对象是否为null
             T instance = (T) EXTENSION_INSTANCES.get(clazz);
             if (instance == null) {
+                //如果扩展对象为空，通过java的反射技术创建一个新的实例并存放到扩展对象中。
                 EXTENSION_INSTANCES.putIfAbsent(clazz, clazz.newInstance());
                 instance = (T) EXTENSION_INSTANCES.get(clazz);
             }
+
+            //扩展对象新建完成后，Dubbo会检查新建创建的扩展对象是否依赖其他扩展对象
+            //如果依赖器其他扩展对象，注入对应的依赖信息
             injectExtension(instance);
+
             Set<Class<?>> wrapperClasses = cachedWrapperClasses;
             if (CollectionUtils.isNotEmpty(wrapperClasses)) {
                 for (Class<?> wrapperClass : wrapperClasses) {
@@ -617,28 +630,37 @@ public class ExtensionLoader<T> {
 
     private T injectExtension(T instance) {
 
+        //检查objectFactory对象是否为null，如果为null直接返回对应实例对象
         if (objectFactory == null) {
             return instance;
         }
 
         try {
+            //获取实例对象的所有成员方法
             for (Method method : instance.getClass().getMethods()) {
+                //判断方法是否是setter方法，如果不是setter方法直接跳过
                 if (!isSetter(method)) {
                     continue;
                 }
                 /**
                  * Check {@link DisableInject} to see if we need auto injection for this property
                  */
+                //检查对应setter方法是否注释@DisableInject注解，如果注有注解表示不需要自动注入所依赖的扩展
                 if (method.getAnnotation(DisableInject.class) != null) {
                     continue;
                 }
+
+                //获取setter方法参数类型
                 Class<?> pt = method.getParameterTypes()[0];
                 if (ReflectUtils.isPrimitives(pt)) {
                     continue;
                 }
 
                 try {
+                    //获取setter方法对应属性信息
                     String property = getSetterProperty(method);
+                    //使用objectFactory通过所依赖插件类型和属性信息创建一个依赖对象实例
+                    //调用对应setter方法并设置到对应扩展对象中
                     Object object = objectFactory.getExtension(pt, property);
                     if (object != null) {
                         method.invoke(instance, object);
@@ -712,7 +734,7 @@ public class ExtensionLoader<T> {
 
     /**
      * synchronized in getExtensionClasses
-     * */
+     */
     private Map<String, Class<?>> loadExtensionClasses() {
         cacheDefaultExtensionName();
 
@@ -759,7 +781,7 @@ public class ExtensionLoader<T> {
         try {
             Enumeration<java.net.URL> urls = null;
             ClassLoader classLoader = findClassLoader();
-            
+
             // try to load from ExtensionLoader's ClassLoader first
             if (extensionLoaderClassLoaderFirst) {
                 ClassLoader extensionLoaderClassLoader = ExtensionLoader.class.getClassLoader();
@@ -767,8 +789,8 @@ public class ExtensionLoader<T> {
                     urls = extensionLoaderClassLoader.getResources(fileName);
                 }
             }
-            
-            if(urls == null || !urls.hasMoreElements()) {
+
+            if (urls == null || !urls.hasMoreElements()) {
                 if (classLoader != null) {
                     urls = classLoader.getResources(fileName);
                 } else {
