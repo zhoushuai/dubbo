@@ -540,14 +540,15 @@ public class ExtensionLoader<T> {
 
     @SuppressWarnings("unchecked")
     public T getAdaptiveExtension() {
+        //尝试从缓存中获取扩展适配器
         Object instance = cachedAdaptiveInstance.get();
+
         if (instance == null) {
             if (createAdaptiveInstanceError != null) {
                 throw new IllegalStateException("Failed to create adaptive instance: " +
                         createAdaptiveInstanceError.toString(),
                         createAdaptiveInstanceError);
             }
-
             synchronized (cachedAdaptiveInstance) {
                 instance = cachedAdaptiveInstance.get();
                 if (instance == null) {
@@ -986,9 +987,14 @@ public class ExtensionLoader<T> {
     }
 
     private Class<?> createAdaptiveExtensionClass() {
+        //使用扩展适配器代码生成器动态生成扩展适配器代码，并返回对应字符串
         String code = new AdaptiveClassCodeGenerator(type, cachedDefaultName).generate();
+        //获取类加载器，用于加载动态生产java类的Class
         ClassLoader classLoader = findClassLoader();
-        org.apache.dubbo.common.compiler.Compiler compiler = ExtensionLoader.getExtensionLoader(org.apache.dubbo.common.compiler.Compiler.class).getAdaptiveExtension();
+        //获取动态编译的编译器
+        org.apache.dubbo.common.compiler.Compiler compiler = ExtensionLoader
+                .getExtensionLoader(org.apache.dubbo.common.compiler.Compiler.class).getAdaptiveExtension();
+        //调用Dubbo提供的编译器，编译动态生成扩展适配器并返回
         return compiler.compile(code, classLoader);
     }
 
