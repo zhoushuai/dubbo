@@ -46,6 +46,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * AbstractInvoker.
+ * 普通执行器，不依赖服务发现
  */
 public abstract class AbstractInvoker<T> implements Invoker<T> {
 

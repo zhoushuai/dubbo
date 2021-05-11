@@ -48,11 +48,13 @@ import static org.apache.dubbo.rpc.cluster.Constants.DEFAULT_CLUSTER_STICKY;
 
 /**
  * AbstractClusterInvoker
+ * 基于Cluster的执行器，ClusterInvoker是基于服务发现实现的执行器
  */
 public abstract class AbstractClusterInvoker<T> implements Invoker<T> {
 
     private static final Logger logger = LoggerFactory.getLogger(AbstractClusterInvoker.class);
 
+    //负责服务发现和注册的Directory
     protected Directory<T> directory;
 
     protected boolean availablecheck;
@@ -160,9 +162,11 @@ public abstract class AbstractClusterInvoker<T> implements Invoker<T> {
         if (CollectionUtils.isEmpty(invokers)) {
             return null;
         }
+
         if (invokers.size() == 1) {
             return invokers.get(0);
         }
+
         Invoker<T> invoker = loadbalance.select(invokers, getUrl(), invocation);
 
         //If the `invoker` is in the  `selected` or invoker is unavailable && availablecheck is true, reselect.
@@ -241,17 +245,23 @@ public abstract class AbstractClusterInvoker<T> implements Invoker<T> {
 
     @Override
     public Result invoke(final Invocation invocation) throws RpcException {
+        //检查执行器是否已经销毁了
         checkWhetherDestroyed();
 
         // binding attachments into invocation.
+        // 构建附件信息并设置到执行信息中
         Map<String, String> contextAttachments = RpcContext.getContext().getAttachments();
         if (contextAttachments != null && contextAttachments.size() != 0) {
             ((RpcInvocation) invocation).addAttachments(contextAttachments);
         }
 
+        //获取所有的执行器
         List<Invoker<T>> invokers = list(invocation);
+        //根据执行器列表和执行信息初始化所有负责均衡器
         LoadBalance loadbalance = initLoadBalance(invokers, invocation);
+        //
         RpcUtils.attachInvocationIdIfAsync(getUrl(), invocation);
+        //调用doInvoker真实执行业务逻辑
         return doInvoke(invocation, invokers, loadbalance);
     }
 

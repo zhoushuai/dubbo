@@ -24,16 +24,19 @@ import org.apache.dubbo.rpc.cluster.support.FailoverCluster;
 
 /**
  * Cluster. (SPI, Singleton, ThreadSafe)
+ * 下面我们再来看看再Dubbo中也是很关键的组件: Cluster 。它主要用于代理真正的Invoker执行时做
+ * 处理，提供了多种容错方案。
  * <p>
  * <a href="http://en.wikipedia.org/wiki/Computer_cluster">Cluster</a>
  * <a href="http://en.wikipedia.org/wiki/Fault-tolerant_system">Fault-Tolerant</a>
- *
  */
 @SPI(FailoverCluster.NAME)
 public interface Cluster {
 
     /**
      * Merge the directory invokers to a virtual invoker.
+     * <p>
+     * 生成一个新的invoker
      *
      * @param <T>
      * @param directory
