@@ -29,6 +29,7 @@ import org.apache.dubbo.common.utils.ConfigUtils;
 import org.apache.dubbo.common.utils.Holder;
 import org.apache.dubbo.common.utils.ReflectUtils;
 import org.apache.dubbo.common.utils.StringUtils;
+import sun.jvm.hotspot.HelloWorld;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
@@ -116,6 +117,7 @@ public class ExtensionLoader<T> {
     }
 
     @SuppressWarnings("unchecked")
+
     public static <T> ExtensionLoader<T> getExtensionLoader(Class<T> type) {
         if (type == null) {
             throw new IllegalArgumentException("Extension type == null");
