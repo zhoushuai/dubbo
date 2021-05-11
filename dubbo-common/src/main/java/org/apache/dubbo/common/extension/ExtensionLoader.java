@@ -539,6 +539,7 @@ public class ExtensionLoader<T> {
     }
 
     @SuppressWarnings("unchecked")
+    //获取扩展适配器实例对象
     public T getAdaptiveExtension() {
         //尝试从缓存中获取扩展适配器
         Object instance = cachedAdaptiveInstance.get();
@@ -549,10 +550,13 @@ public class ExtensionLoader<T> {
                         createAdaptiveInstanceError.toString(),
                         createAdaptiveInstanceError);
             }
+
+            //使用双重检查的方式实例化一个扩展适配器
             synchronized (cachedAdaptiveInstance) {
                 instance = cachedAdaptiveInstance.get();
                 if (instance == null) {
                     try {
+                        //创建一个适配扩展实例对象
                         instance = createAdaptiveExtension();
                         cachedAdaptiveInstance.set(instance);
                     } catch (Throwable t) {
@@ -972,6 +976,9 @@ public class ExtensionLoader<T> {
     @SuppressWarnings("unchecked")
     private T createAdaptiveExtension() {
         try {
+            //实例化一个Adaptive扩展并基于setter注入注入相关扩展依赖
+            //1. 获取Adaptive的Class
+            //2. 调用jdk反射实例化
             return injectExtension((T) getAdaptiveExtensionClass().newInstance());
         } catch (Exception e) {
             throw new IllegalStateException("Can't create adaptive extension " + type + ", cause: " + e.getMessage(), e);
@@ -986,11 +993,16 @@ public class ExtensionLoader<T> {
         return cachedAdaptiveClass = createAdaptiveExtensionClass();
     }
 
+    //创建一个适配器扩展Class对象
     private Class<?> createAdaptiveExtensionClass() {
+        //基于给定的类型动态生成一个适配java类的字符串，
         //使用扩展适配器代码生成器动态生成扩展适配器代码，并返回对应字符串
         String code = new AdaptiveClassCodeGenerator(type, cachedDefaultName).generate();
+
         //获取类加载器，用于加载动态生产java类的Class
         ClassLoader classLoader = findClassLoader();
+
+        //使用上面获取的编译器对上个适配器代码进行编译，编译完成后并返回对应的class对象
         //获取动态编译的编译器
         org.apache.dubbo.common.compiler.Compiler compiler = ExtensionLoader
                 .getExtensionLoader(org.apache.dubbo.common.compiler.Compiler.class).getAdaptiveExtension();
