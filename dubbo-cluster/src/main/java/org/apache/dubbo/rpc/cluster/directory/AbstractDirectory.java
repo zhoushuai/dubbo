@@ -50,6 +50,7 @@ public abstract class AbstractDirectory<T> implements Directory<T> {
 
     private volatile URL consumerUrl;
 
+    //路由链表中存放了所有路由
     protected RouterChain<T> routerChain;
 
     public AbstractDirectory(URL url) {
@@ -78,10 +79,12 @@ public abstract class AbstractDirectory<T> implements Directory<T> {
 
     @Override
     public List<Invoker<T>> list(Invocation invocation) throws RpcException {
+        //方法只做了有效性验证
         if (destroyed) {
             throw new RpcException("Directory already destroyed .url: " + getUrl());
         }
 
+        //具体也委托给抽象的doList()方法
         return doList(invocation);
     }
 

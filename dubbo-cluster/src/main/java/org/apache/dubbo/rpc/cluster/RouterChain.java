@@ -93,9 +93,12 @@ public class RouterChain<T> {
      * @param invocation
      * @return
      */
-    public List<Invoker<T>> route(URL url, Invocation invocation) {
+    public List<Invoker<T>>  route(URL url, Invocation invocation) {
+        //获取所有inver列表
         List<Invoker<T>> finalInvokers = invokers;
         for (Router router : routers) {
+            //把所有Invokers依次交给路由，然后由路由选择Inverker
+            //每个路由调用完route后都会返回一个新的列表
             finalInvokers = router.route(finalInvokers, url, invocation);
         }
         return finalInvokers;

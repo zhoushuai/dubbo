@@ -380,6 +380,7 @@ public class RegistryProtocol implements Protocol {
     @SuppressWarnings("unchecked")
     public <T> Invoker<T> refer(Class<T> type, URL url) throws RpcException {
         url = getRegistryUrl(url);
+        //获取注册中心，主要是通过URL来了确认获取什么类型的注册中心
         Registry registry = registryFactory.getRegistry(url);
         if (RegistryService.class.equals(type)) {
             return proxyFactory.getInvoker((T) registry, type, url);
@@ -393,6 +394,7 @@ public class RegistryProtocol implements Protocol {
                 return doRefer(getMergeableCluster(), registry, type, url);
             }
         }
+        //调用具体执行业务的方法
         return doRefer(cluster, registry, type, url);
     }
 
@@ -401,20 +403,27 @@ public class RegistryProtocol implements Protocol {
     }
 
     private <T> Invoker<T> doRefer(Cluster cluster, Registry registry, Class<T> type, URL url) {
+        //实例化Directory实例
         RegistryDirectory<T> directory = new RegistryDirectory<T>(type, url);
+        //设置注册中心和所使用的协议
         directory.setRegistry(registry);
         directory.setProtocol(protocol);
         // all attributes of REFER_KEY
+        //生成监听路径URL
         Map<String, String> parameters = new HashMap<String, String>(directory.getUrl().getParameters());
         URL subscribeUrl = new URL(CONSUMER_PROTOCOL, parameters.remove(REGISTER_IP_KEY), 0, type.getName(), parameters);
         if (!ANY_VALUE.equals(url.getServiceInterface()) && url.getParameter(REGISTER_KEY, true)) {
+            //在Directory中设置监听的Consumer的URL
             directory.setRegisteredConsumerUrl(getRegisteredConsumerUrl(subscribeUrl, url));
+            //在注册中心中注册消费的URL，如果使用Zookeeper做为注册中心的URL格式就是consumer://
             registry.register(directory.getRegisteredConsumerUrl());
         }
+        //构建路由链路
         directory.buildRouterChain(subscribeUrl);
+        //进行监听所有的provider
         directory.subscribe(subscribeUrl.addParameter(CATEGORY_KEY,
                 PROVIDERS_CATEGORY + "," + CONFIGURATORS_CATEGORY + "," + ROUTERS_CATEGORY));
-
+        //加入到集群中
         Invoker invoker = cluster.join(directory);
         return invoker;
     }
