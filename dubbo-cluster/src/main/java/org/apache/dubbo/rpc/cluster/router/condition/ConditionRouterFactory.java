@@ -22,7 +22,13 @@ import org.apache.dubbo.rpc.cluster.RouterFactory;
 
 /**
  * ConditionRouterFactory
- *
+ * <p>
+ * 基于条件表达式的路由实现
+ * <p>
+ * host = 192.168.0.100 => host = 192.168.0.150
+ * 在上述规则中，=>之前的为 Consumer 匹配的条件，该条件中的所有参数会与 Consumer 的 URL 进行对比，当 Consumer 满足匹配条件时，
+ * 会对该 Consumer 的此次调用执行 => 后面的过滤规则 => 之后为 Provider 地址列表的过滤条件，该条件中的所有参数会和 Provider
+ * 的 URL 进行对比，Consumer 最终只拿到过滤后的地址列表。
  */
 public class ConditionRouterFactory implements RouterFactory {
 

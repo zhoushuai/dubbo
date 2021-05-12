@@ -29,17 +29,28 @@ import java.util.stream.Collectors;
 
 /**
  * Router chain
+ * <p>
+ * RouterChain封装了Invoker列表和Router列表，并且提供了通过URL和Invocation来获取可以执行RPC调用的Invoker列表。RouterChain通过封装
+ * Invoker和Router实现支持多个路由组合过滤Invoker,解决单个Router无法满足业务需求的问题。
+ * <p>
+ * Invoker列表由RouterChain统一管理，当用户需要调用路由方法时就不用在传入Invoker列表了
  */
 public class RouterChain<T> {
 
     // full list of addresses from registry, classified by method name.
+    //当前 RouterChain 对象要过滤的 Invoker 集合。
+    // 我们可以看到，在 StaticDirectory 中是通过 RouterChain.setInvokers() 方法进行设置的。
     private List<Invoker<T>> invokers = Collections.emptyList();
 
     // containing all routers, reconstruct every time 'route://' urls change.
+    //当前 RouterChain 激活的内置 Router 集合。
     private volatile List<Router> routers = Collections.emptyList();
 
     // Fixed router instances: ConfigConditionRouter, TagRouter, e.g., the rule for each instance may change but the
     // instance will never delete or recreate.
+    //当前 RouterChain 中真正要使用的 Router 集合，其中不仅包括了上面 builtinRouters
+    // 集合中全部的 Router 对象，还包括通过 addRouters() 方法添加的 Router 对象。
+    // 包括Dubbo框架内置的路由列表和自定义的路由列表集合
     private List<Router> builtinRouters = Collections.emptyList();
 
     public static <T> RouterChain<T> buildChain(URL url) {
@@ -47,13 +58,17 @@ public class RouterChain<T> {
     }
 
     private RouterChain(URL url) {
-        List<RouterFactory> extensionFactories = ExtensionLoader.getExtensionLoader(RouterFactory.class)
+        //通过URL中的router参数加载RouterFactory实例列表使用SPI技术
+        List<RouterFactory> extensionFactories = ExtensionLoader
+                .getExtensionLoader(RouterFactory.class)
                 .getActivateExtension(url, "router");
 
+        // 遍历所有RouterFactory，调用其getRouter()方法创建相应的Router对象
         List<Router> routers = extensionFactories.stream()
                 .map(factory -> factory.getRouter(url))
                 .collect(Collectors.toList());
 
+        //初始化所有路由列表
         initWithRouters(routers);
     }
 
@@ -77,9 +92,9 @@ public class RouterChain<T> {
      */
     public void addRouters(List<Router> routers) {
         List<Router> newRouters = new ArrayList<>();
-        newRouters.addAll(builtinRouters);
-        newRouters.addAll(routers);
-        CollectionUtils.sort(newRouters);
+        newRouters.addAll(builtinRouters);// 添加builtinRouters集合
+        newRouters.addAll(routers);// 添加传入的Router集合
+        CollectionUtils.sort(newRouters);// 重新排序
         this.routers = newRouters;
     }
 
@@ -88,17 +103,15 @@ public class RouterChain<T> {
     }
 
     /**
-     *
      * @param url
      * @param invocation
      * @return
      */
-    public List<Invoker<T>>  route(URL url, Invocation invocation) {
+    public List<Invoker<T>> route(URL url, Invocation invocation) {
         //获取所有inver列表
         List<Invoker<T>> finalInvokers = invokers;
-        for (Router router : routers) {
-            //把所有Invokers依次交给路由，然后由路由选择Inverker
-            //每个路由调用完route后都会返回一个新的列表
+        for (Router router : routers) { // 遍历全部的Router对象
+            //如何过滤Invoker是由各个路由器决定
             finalInvokers = router.route(finalInvokers, url, invocation);
         }
         return finalInvokers;

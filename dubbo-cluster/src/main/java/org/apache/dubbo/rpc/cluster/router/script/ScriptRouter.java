@@ -48,6 +48,8 @@ import static org.apache.dubbo.rpc.cluster.Constants.TYPE_KEY;
 
 /**
  * ScriptRouter
+ * ScriptRouter 支持 JDK 脚本引擎的所有脚本，
+ * 例如，JavaScript、JRuby、Groovy 等，通过 type=javascript 参数设置脚本类型，缺省为 javascript。
  */
 public class ScriptRouter extends AbstractRouter {
     public static final String NAME = "SCRIPT_ROUTER";
@@ -56,19 +58,30 @@ public class ScriptRouter extends AbstractRouter {
 
     private static final Map<String, ScriptEngine> engines = new ConcurrentHashMap<>();
 
+    /**
+     * 当前 ScriptRouter 使用的 ScriptEngine 对象。
+     */
     private final ScriptEngine engine;
 
+    /**
+     * 当前 ScriptRouter 使用的具体脚本内容
+     */
     private final String rule;
 
+    /**
+     * 根据 rule 这个具体脚本内容编译得到。
+     */
     private CompiledScript function;
 
     public ScriptRouter(URL url) {
         this.url = url;
         this.priority = url.getParameter(PRIORITY_KEY, SCRIPT_ROUTER_DEFAULT_PRIORITY);
 
+        // 根据URL中的type参数值，从ENGINES集合中获取对应的ScriptEngine对象
         engine = getEngine(url);
+        // 获取URL中的rule参数值，即为具体的脚本
         rule = getRule(url);
-        try {
+        try {// 编译rule字段中的脚本，得到function字段
             Compilable compilable = (Compilable) engine;
             function = compilable.compile(rule);
         } catch (ScriptException e) {
@@ -108,10 +121,12 @@ public class ScriptRouter extends AbstractRouter {
     @Override
     public <T> List<Invoker<T>> route(List<Invoker<T>> invokers, URL url, Invocation invocation) throws RpcException {
         try {
+            // 创建Bindings对象作为function函数的入参
             Bindings bindings = createBindings(invokers, invocation);
             if (function == null) {
                 return invokers;
             }
+            // 调用function函数，并在getRoutedInvokers()方法中整理得到的Invoker集合
             return getRoutedInvokers(function.eval(bindings));
         } catch (ScriptException e) {
             logger.error("route error, rule has been ignored. rule: " + rule + ", method:" +
@@ -125,6 +140,7 @@ public class ScriptRouter extends AbstractRouter {
      */
     @SuppressWarnings("unchecked")
     protected <T> List<Invoker<T>> getRoutedInvokers(Object obj) {
+
         if (obj instanceof Invoker[]) {
             return Arrays.asList((Invoker<T>[]) obj);
         } else if (obj instanceof Object[]) {
@@ -139,6 +155,7 @@ public class ScriptRouter extends AbstractRouter {
      */
     private <T> Bindings createBindings(List<Invoker<T>> invokers, Invocation invocation) {
         Bindings bindings = engine.createBindings();
+        // 与前面的javascript的示例脚本结合，我们可以看到这里在Bindings中为脚本中的route()函数提供了invokers、Invocation、context三个参数
         // create a new List of invokers
         bindings.put("invokers", new ArrayList<>(invokers));
         bindings.put("invocation", invocation);

@@ -38,10 +38,13 @@ public interface RouterFactory {
     /**
      * Create router.
      * Since 2.7.0, most of the time, we will not use @Adaptive feature, so it's kept only for compatibility.
+     * <p>
+     * 基于协议类型实例化路由
      *
      * @param url url
      * @return router instance
      */
+    //动态生成的适配器会根据protocol参数选择扩展实现
     @Adaptive("protocol")
     Router getRouter(URL url);
 }

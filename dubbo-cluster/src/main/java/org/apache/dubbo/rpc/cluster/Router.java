@@ -27,6 +27,11 @@ import java.util.List;
  * Router. (SPI, Prototype, ThreadSafe)
  * <p>
  * <a href="http://en.wikipedia.org/wiki/Routing">Routing</a>
+ * Router 决定了一次 Dubbo 调用的目标服务，Router 接口的每个实现类代表了一个路由规则，
+ * 当 Consumer 访问 Provider 时，Dubbo 根据路由规则筛选出合适的 Provider 列表，
+ * 之后通过负载均衡算法再次进行筛选。
+ * <p>
+ * Router 的主要功能就是根据用户配置的路由规则以及请求携带的信息，过滤出符合条件的 Invoker 集合，供后续负载均衡逻辑使用。
  *
  * @see org.apache.dubbo.rpc.cluster.Cluster#join(Directory)
  * @see org.apache.dubbo.rpc.cluster.Directory#list(Invocation)
@@ -44,6 +49,8 @@ public interface Router extends Comparable<Router> {
 
     /**
      * Filter invokers with current routing rule and only return the invokers that comply with the rule.
+     * <p>
+     * 使用路由规则匹配所有满足条件执行器列表并返回
      *
      * @param invokers   invoker list
      * @param url        refer url
@@ -77,6 +84,8 @@ public interface Router extends Comparable<Router> {
      * To decide whether this router should take effect when none of the invoker can match the router rule, which
      * means the {@link #route(List, URL, Invocation)} would be empty. Most of time, most router implementation would
      * default this value to false.
+     * <p>
+     * 当所有Invoker都不能匹配时此路由器是否生效。
      *
      * @return true to execute if none of invokers matches the current router
      */
@@ -84,6 +93,8 @@ public interface Router extends Comparable<Router> {
 
     /**
      * Router's priority, used to sort routers.
+     * <p>
+     * 路由优先级用于排序
      *
      * @return router's priority
      */
